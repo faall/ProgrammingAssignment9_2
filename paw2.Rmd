@@ -1,0 +1,53 @@
+---
+title: "Population of Spain's Regional Capitals"
+author: "Fabio Alexandre Alberini Lopes Lima"
+date: "2 de diciembre de 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## About the Data
+
+This project creates a map with the location and population of the capital for each of the 50 regions (Provincias) in Spain.
+
+The geographical coordindinates (latitude and longitude) were taken from this web page: <https://www.businessintelligence.info/varios/longitud-latitud-pueblos-espana.html>
+
+The previous page also provided population information, but since it was outdated, I used information from National Institute of Statistics (INE) to get the updated data (2016) <http://ine.es/jaxiT3/Datos.htm?t=2911>
+
+```{r}
+population <- read.csv("2911sc.csv", sep = ";", skip = 7, stringsAsFactors = F, header = F, nrows = 50, encoding = "latin1")
+capitals <- sub("/", "-", substr(population$V1, start = 7, stop = 100))
+capitals <- sub("Palma de Mallorca", "Palma", capitals)
+population <- population[order(capitals),]
+
+coord <- read.csv("listado-longitud-latitud-municipios-espana.csv", sep = ";", skip = 2, stringsAsFactors = F, header = T, dec = ",")
+
+coord$Población <- sub("/", "-", coord$Población)
+coord$Población <- sub(" (A)", ", A", coord$Población, fixed = T)
+coord$Población <- sub(" (Las)", ", Las", coord$Población, fixed = T)
+
+latlong <- subset(coord, coord$Población %in% capitals, select = c(Población, Latitud, Longitud, Habitantes))
+latlong <- latlong[order(latlong$Población),]
+
+names(latlong) <- c("City", "latitude", "longitude", "Population")
+latlong$Population2016 <- population$V2
+```
+
+
+## Spain: Regional Capitals
+
+```{r,message=FALSE}
+library(leaflet)
+
+spainCapitals <- leaflet(latlong) %>%
+      addTiles(urlTemplate = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png") %>%
+      addCircleMarkers(label = paste(latlong$City, " (", as.character(latlong$Population2016),")"),
+                       radius = sqrt(latlong$Population2016)/100,
+                       weight = 1,
+                       fillColor = "green")
+spainCapitals
+```
+
